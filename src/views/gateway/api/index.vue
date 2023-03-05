@@ -79,7 +79,7 @@
           <el-button :loading="crud.status.cu === 2" type="primary" @click="crud.submitCU">确认</el-button>
         </div>
       </el-dialog>
-      <el-dialog title="API 信息" :visible.sync="dialogReadFormVisible">
+      <el-dialog title="API信息" :visible.sync="dialogReadFormVisible">
         <el-tabs v-model="apiTab" type="card">
           <el-tab-pane v-for="(item, index) in apiInfo.apiVersions" :key="index" :label="item.env" :name="item.env">
             <el-form ref="form" :model="item" :rules="rules" size="small" label-width="80px" disabled>
