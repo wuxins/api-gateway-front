@@ -3,7 +3,21 @@
     <!--工具栏-->
     <div class="head-container">
       <!--如果想在工具栏加入更多按钮，可以使用插槽方式， slot = 'left' or 'right'-->
-      <crudOperation :permission="permission" />
+      <crudOperation :permission="permission">
+        <el-button
+          slot="right"
+          v-if="crud.optShow.add"
+          v-permission="permission.add"
+          class="filter-item"
+          size="mini"
+          type="success"
+          icon="el-icon-check"
+          circle
+          :disabled="crud.selections.length !== 1"
+          @click="syncApi(crud.selections)">
+          同步
+        </el-button>
+      </crudOperation>
       <!--表单组件-->
       <el-dialog :close-on-click-modal="false" :before-close="crud.cancelCU" :visible.sync="crud.status.cu > 0" :title="crud.status.title" width="800px">
         <el-form ref="form" :model="form" :rules="rules" size="small" label-width="80px">
@@ -79,68 +93,78 @@
           <el-button :loading="crud.status.cu === 2" type="primary" @click="crud.submitCU">确认</el-button>
         </div>
       </el-dialog>
-      <el-dialog title="API信息" :visible.sync="dialogReadFormVisible">
-        <el-tabs v-model="apiTab" type="card">
-          <el-tab-pane v-for="(item, index) in apiInfo.apiVersions" :key="index" :label="item.env" :name="item.env">
-            <el-form ref="form" :model="item" :rules="rules" size="small" label-width="80px" disabled>
+      <el-dialog title="API信息同步" :visible.sync="dialogSyncFormVisible" width="600px">
+        <el-form ref="form" :model="form" :rules="rules" size="small" label-width="80px" inline>
+          <el-form-item label="源环境" prop="name">
+            <el-input v-model="form.name" style="width: 100px;" />
+          </el-form-item>
+          <el-form-item label="目标环境" prop="name">
+            <el-input v-model="form.name" style="width: 100px;" />
+          </el-form-item>
+        </el-form>
+      </el-dialog>
+      <el-dialog title="API信息" :visible.sync="dialogReadFormVisible" width="1000px">
+        <el-tabs v-model="apiTab" type="card" style="color: #409EFF">
+          <el-tab-pane v-for="(item, index) in apiInfo.apiVersions" :key="index" :label="item.envName" :name="item.env" style="color: #409EFF">
+            <el-form ref="form" :model="item" :rules="rules" size="small" label-width="80px" disabled :inline="true" >
               <el-form-item label="名称" prop="name">
-                <el-input v-model="apiInfo.name" style="width: 370px;" />
+                <el-input v-model="apiInfo.name" />
               </el-form-item>
               <el-form-item label="维护人" prop="maintainer">
-                <el-input v-model="apiInfo.maintainer" style="width: 370px;" />
+                <el-input v-model="apiInfo.maintainer"  />
               </el-form-item>
               <el-form-item label="请求方式">
-                <el-radio-group v-model="item.method" style="width: 370px">
+                <el-radio-group v-model="item.method">
                   <el-radio label="GET">GET</el-radio>
                   <el-radio label="POST">POST</el-radio>
                   <el-radio label="PUT">PUT</el-radio>
                   <el-radio label="DELETE">DELETE</el-radio>
                 </el-radio-group>
               </el-form-item>
+              <el-form-item label="上游应用" prop="upstreamServices">
+                <el-input v-model="item.serviceName" />
+              </el-form-item>
               <el-form-item label="源路径" prop="srcUrl">
-                <el-input v-model="item.srcUrl" style="width: 370px;" />
+                <el-input v-model="item.srcUrl" />
               </el-form-item>
               <el-form-item label="目标路径" prop="desUrl">
-                <el-input v-model="item.desUrl" style="width: 370px;" />
-              </el-form-item>
-              <el-form-item label="上游应用" prop="upstreamServices">
-                <el-select v-model="item.serviceCode" style="width: 370px" placeholder="请选择上游应用" />
+                <el-input v-model="item.serviceAddress+item.desUrl" />
               </el-form-item>
               <el-form-item label="是否限流">
-                <el-radio-group v-model="item.needRateLimit" style="width: 178px">
+                <el-radio-group v-model="item.needRateLimit">
                   <el-radio label="Y">是</el-radio>
                   <el-radio label="N">否</el-radio>
                 </el-radio-group>
               </el-form-item>
               <el-form-item label="限流大小">
-                <el-input v-model="item.rateLimit" style="width: 370px;" />
+                <el-input v-model="item.rateLimit"/>
               </el-form-item>
-              <el-form-item label="是否限流">
-                <el-radio-group v-model="item.needFallback" style="width: 178px">
+              <el-form-item label="是否降级">
+                <el-radio-group v-model="item.needFallback">
                   <el-radio label="Y">是</el-radio>
                   <el-radio label="N">否</el-radio>
                 </el-radio-group>
               </el-form-item>
               <el-form-item label="降级内容">
-                <el-input v-model="item.fallback" style="width: 370px;" />
+                <el-input v-model="item.fallback"/>
               </el-form-item>
               <el-form-item label="是否开启监控">
-                <el-radio-group v-model="item.needMonitor" style="width: 178px">
+                <el-radio-group v-model="item.needMonitor">
                   <el-radio label="Y">是</el-radio>
                   <el-radio label="N">否</el-radio>
                 </el-radio-group>
               </el-form-item>
               <el-form-item label="超时时间">
-                <el-input v-model="item.readTimeout" style="width: 370px;" />
+                <el-input v-model="item.readTimeout"/>
               </el-form-item>
               <el-form-item label="头信息忽略">
-                <el-input v-model="item.ignoreHeaderParams" style="width: 370px;" />
+                <el-input v-model="item.ignoreHeaderParams"/>
               </el-form-item>
               <el-form-item label="参数信息忽略">
-                <el-input v-model="item.ignoreQueryParams" style="width: 370px;" />
+                <el-input v-model="item.ignoreQueryParams"/>
               </el-form-item>
               <el-form-item label="描述信息" prop="description">
-                <el-input v-model="apiInfo.description" style="width: 370px;" />
+                <el-input v-model="apiInfo.description"/>
               </el-form-item>
             </el-form>
           </el-tab-pane>
@@ -157,8 +181,8 @@
         <el-table-column prop="serviceCode" label="上游应用" />
         <el-table-column prop="maintainer" label="维护人" />
         <el-table-column prop="gmtCreated" label="创建时间" />
-        <el-table-column v-if="checkPer(['admin','apiVersion:edit','apiVersion:del'])" label="操作" width="150px" align="center">
-          <template slot-scope="scope">
+        <el-table-column v-if="checkPer(['admin','apiVersion:edit','apiVersion:del'])" label="操作" width="180px" align="center">
+          <template slot-scope="scope" class="operation-cell">
             <el-button size="mini" type="primary" icon="el-icon-view" @click="getApi(scope.row.apiCode)" />
             <udOperation
               :data="scope.row"
@@ -228,6 +252,7 @@ export default {
     return {
       apiInfo: {},
       upstreamServices: [],
+      dialogSyncFormVisible: false,
       dialogReadFormVisible: false,
       permission: {
         add: ['admin', 'apiVersion:add'],
@@ -278,6 +303,10 @@ export default {
       }).catch(() => {
       })
       this.dialogReadFormVisible = true
+    },
+    syncApi(data) {
+      console.log(JSON.stringify(data))
+      this.dialogSyncFormVisible = true
     }
   }
 }
